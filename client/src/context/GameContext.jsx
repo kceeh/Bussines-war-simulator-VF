@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiRequest } from '../config/api';
+import { apiRequest, API_ENDPOINTS } from '../config/api';
 
 const GameContext = createContext();
 
@@ -24,7 +24,7 @@ export const GameProvider = ({ children }) => {
 
         if (token && storedAuth === 'true') {
             try {
-                const profile = await apiRequest('/auth/profile', 'GET');
+                const profile = await apiRequest(API_ENDPOINTS.AUTH.PROFILE, 'GET');
                 setUser(profile.user);
                 setIsAuthenticated(true);
                 await loadCurrentGame(); 
@@ -41,7 +41,7 @@ export const GameProvider = ({ children }) => {
     // ✅ 2. CARGAR PARTIDA ACTUAL (Lógica "Nuevo vs Viejo")
     const loadCurrentGame = async () => {
         try {
-            const response = await apiRequest('/games/current', 'GET');
+            const response = await apiRequest(API_ENDPOINTS.GAMES.CURRENT, 'GET');
             
             if (response.success) {
                 if (response.game && response.game.gameState) {
@@ -50,7 +50,7 @@ export const GameProvider = ({ children }) => {
                     setIsNewPlayer(false);
                 } else {
                     // CASO B: NO TIENE PARTIDA (Usuario Nuevo o Reset)
-                    // El backend devolvió 200 OK pero game: null
+                    // El backend devolvié 200 OK pero game: null
                     console.log("Usuario sin partida activa. Requiere Setup.");
                     setGameState(null);
                     setIsNewPlayer(true); 
@@ -73,12 +73,12 @@ export const GameProvider = ({ children }) => {
     // ✅ 3. LOGIN
     const loginUser = async (credentials) => {
         try {
-            const result = await apiRequest('/auth/login', 'POST', credentials);
+            const result = await apiRequest(API_ENDPOINTS.AUTH.LOGIN, 'POST', credentials);
             if (result.success) {
                 localStorage.setItem('token', result.token);
                 localStorage.setItem('isAuthenticated', 'true');
                 
-                const profile = await apiRequest('/auth/profile', 'GET');
+                const profile = await apiRequest(API_ENDPOINTS.AUTH.PROFILE, 'GET');
                 setUser(profile.user);
                 setIsAuthenticated(true);
                 
@@ -94,7 +94,7 @@ export const GameProvider = ({ children }) => {
     // ✅ 4. REGISTRO / LOGOUT
     const registerUser = async (userData) => {
         try {
-            const result = await apiRequest('/auth/register', 'POST', userData);
+            const result = await apiRequest(API_ENDPOINTS.AUTH.REGISTER, 'POST', userData);
             return result;
         } catch (error) {
             return { success: false, message: error.message };
@@ -114,7 +114,7 @@ export const GameProvider = ({ children }) => {
     // ✅ 5. CREAR NUEVA PARTIDA (Actualiza estado al instante)
     const createNewGame = async (gameData) => {
         try {
-            const response = await apiRequest('/games/new', 'POST', gameData);
+            const response = await apiRequest(API_ENDPOINTS.GAMES.NEW, 'POST', gameData);
             if (response.success) {
                 setGameState(response.game.gameState);
                 setIsNewPlayer(false); // 🔓 ¡DESBLOQUEA EL DASHBOARD!
@@ -133,7 +133,7 @@ export const GameProvider = ({ children }) => {
         if (newState) setGameState(newState);
         if (isAuthenticated && newState) {
             try { 
-                await apiRequest('/games/save', 'POST', { gameState: newState }); 
+                await apiRequest(API_ENDPOINTS.GAMES.SAVE, 'POST', { gameState: newState }); 
             } catch (error) { 
                 console.error('Error guardando partida en segundo plano:', error); 
             }
@@ -143,7 +143,7 @@ export const GameProvider = ({ children }) => {
     // ✅ 7. ACCIONES DE JUEGO
     const processInvestment = async (investmentLevels) => {
         try {
-            const response = await apiRequest('/games/investment', 'POST', { investmentLevels });
+            const response = await apiRequest('games/investment', 'POST', { investmentLevels });
             if (response.success) {
                 setGameState(response.gameState);
                 return { success: true, message: response.message, capitalRemaining: response.capitalRemaining };
@@ -157,7 +157,7 @@ export const GameProvider = ({ children }) => {
 
     const advanceWeek = async () => {
         try {
-            const response = await apiRequest('/games/advance', 'POST');
+            const response = await apiRequest('games/advance', 'POST');
             if (response.success) {
                 setGameState(response.gameState);
                 return { success: true, message: response.message, week: response.week };
@@ -172,7 +172,7 @@ export const GameProvider = ({ children }) => {
     const resetGame = async () => {
         if (isAuthenticated) {
             try { 
-                await apiRequest('/games/reset', 'POST'); 
+                await apiRequest(API_ENDPOINTS.GAMES.RESET, 'POST'); 
             } catch (error) { 
                 console.error('Error reiniciando partida:', error); 
             }
@@ -184,7 +184,7 @@ export const GameProvider = ({ children }) => {
     // ✅ 8. GETTERS AUXILIARES
     const getDashboardData = async () => {
         try {
-            const response = await apiRequest('/games/dashboard', 'GET');
+            const response = await apiRequest('games/dashboard', 'GET');
             return response.success ? response.dashboardData : null;
         } catch (error) {
             console.error('Error obteniendo datos del dashboard:', error);
@@ -194,13 +194,12 @@ export const GameProvider = ({ children }) => {
 
     const getGameStatus = async () => {
         try {
-            const response = await apiRequest('/games/status', 'GET');
+            const response = await apiRequest('games/status', 'GET');
             return response.success ? response.status : null;
         } catch (error) {
             return null;
         }
     };
-
 
     const value = {
         user, isAuthenticated, gameState, isLoading, isNewPlayer, // Exportamos isNewPlayer
