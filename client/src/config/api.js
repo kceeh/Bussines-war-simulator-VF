@@ -1,5 +1,5 @@
 // config/api.js
-const API_BASE = 'https://bussines-war-simulator-vf.onrender.com/';
+const API_BASE = 'https://bussines-war-simulator-vf.onrender.com';
 
 export const apiRequest = async (endpoint, method = 'GET', data = null) => {
     console.log('🔍 DEBUG API: Llamando a:', `${API_BASE}${endpoint}`);

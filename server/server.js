@@ -14,23 +14,27 @@ const userRoutes = require('./routes/users');
 
 const app = express();
 
-// Middleware CORS CORREGIDO
-const allowedOrigins = [
-  'https://bussines-war-simulator-vf.vercel.app',
-  'http://localhost:5173'
-];
-
+// Middleware CORS ACTUALIZADO - PERMITIR TODOS LOS SUBDOMINIOS DE VERCEL
 app.use(cors({
   origin: function (origin, callback) {
     // Permitir requests sin origin
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+    // Permitir localhost para desarrollo
+    if (origin.includes('localhost')) return callback(null, true);
+    
+    // Permitir CUALQUIER subdominio de vercel.app
+    if (origin.endsWith('.vercel.app')) {
       return callback(null, true);
-    } else {
-      console.log('CORS bloqueado para origen:', origin);
-      return callback(new Error('CORS policy violation'), false);
     }
+    
+    // Permitir también tu dominio principal por si acaso
+    if (origin === 'https://bussines-war-simulator-vf.vercel.app') {
+      return callback(null, true);
+    }
+    
+    console.log('CORS bloqueado para origen:', origin);
+    return callback(new Error('CORS not allowed'), false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -64,5 +68,5 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-    console.log(`🌐 Orígenes permitidos:`, allowedOrigins);
+    console.log(`🌐 CORS configurado para: localhost y *.vercel.app`);
 });
