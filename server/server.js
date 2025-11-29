@@ -15,12 +15,30 @@ const userRoutes = require('./routes/users');
 const app = express();
 
 // Middleware CORS CORREGIDO
+const allowedOrigins = [
+  'https://bussines-war-simulator-vf.vercel.app',
+  'http://localhost:5173'
+];
+
 app.use(cors({
-    origin: process.env.CLIENT_URL || ['http://localhost:5173', 'https://bussines-war-simulator-cdn46zttn-kceehs-projects.vercel.app/'],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+  origin: function (origin, callback) {
+    // Permitir requests sin origin
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+      return callback(null, true);
+    } else {
+      console.log('CORS bloqueado para origen:', origin);
+      return callback(new Error('CORS policy violation'), false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
 }));
+
+// Middleware para preflight requests
+app.options('*', cors());
 
 app.use(express.json());
 
@@ -46,5 +64,5 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Servidor ejecutándose en puerto ${PORT}`);
-    console.log(`🌐 Frontend configurado para: ${process.env.CLIENT_URL}`);
+    console.log(`🌐 Orígenes permitidos:`, allowedOrigins);
 });
