@@ -16,7 +16,7 @@ const app = express();
 
 // Middleware CORS CORREGIDO
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: process.env.CLIENT_URL || ['http://localhost:5173', 'https://bussines-war-simulator-cdn46zttn-kceehs-projects.vercel.app/'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
