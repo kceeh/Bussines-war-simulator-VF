@@ -2,7 +2,11 @@
 const API_BASE = 'https://bussines-war-simulator-vf.onrender.com';
 
 export const apiRequest = async (endpoint, method = 'GET', data = null) => {
-    console.log('🔍 DEBUG API: Llamando a:', `${API_BASE}${endpoint}`);
+    // ✅ NUEVO: Remover slash duplicado si existe
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    const fullUrl = `${API_BASE}/${cleanEndpoint}`;
+    
+    console.log('🔍 DEBUG API: Llamando a:', fullUrl);
     console.log('🔍 DEBUG API: Método:', method);
     console.log('🔍 DEBUG API: Datos:', data);
 
@@ -30,7 +34,7 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
     }
 
     try {
-        const response = await fetch(`${API_BASE}${endpoint}`, options);
+        const response = await fetch(fullUrl, options);
 
         console.log('🔍 DEBUG API: Status:', response.status);
         console.log('🔍 DEBUG API: OK:', response.ok);
@@ -85,15 +89,15 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
 
 export const API_ENDPOINTS = {
     AUTH: {
-        REGISTER: '/auth/register',
-        LOGIN: '/auth/login',
-        PROFILE: '/auth/profile'
+        REGISTER: 'auth/register',  // ✅ Sin slash inicial
+        LOGIN: 'auth/login',        // ✅ Sin slash inicial
+        PROFILE: 'auth/profile'     // ✅ Sin slash inicial
     },
     GAMES: {
-        CURRENT: '/games/current',
-        NEW: '/games/new',
-        SAVE: '/games/save',
-        DECISION: '/games/decision',
-        RESET: '/games/reset'
+        CURRENT: 'games/current',   // ✅ Sin slash inicial
+        NEW: 'games/new',           // ✅ Sin slash inicial
+        SAVE: 'games/save',         // ✅ Sin slash inicial
+        DECISION: 'games/decision', // ✅ Sin slash inicial
+        RESET: 'games/reset'        // ✅ Sin slash inicial
     }
 };
