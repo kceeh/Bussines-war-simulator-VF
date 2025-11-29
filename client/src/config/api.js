@@ -1,5 +1,5 @@
-// config/api.js
-const API_BASE = 'https://bussines-war-simulator-vf.onrender.com';
+// client/src/config/api.js - VERSIÓN COMPLETA CORREGIDA
+const API_BASE = 'https://bussines-war-simulator-vf.onrender.com/api';
 
 export const apiRequest = async (endpoint, method = 'GET', data = null) => {
     // ✅ DEBUG EXTRA - mostrar exactamente qué endpoint llega
@@ -119,6 +119,10 @@ export const API_ENDPOINTS = {
         NEW: 'games/new',
         SAVE: 'games/save',
         DECISION: 'games/decision',
-        RESET: 'games/reset'
+        RESET: 'games/reset',
+        INVESTMENT: 'games/investment',
+        ADVANCE: 'games/advance',
+        DASHBOARD: 'games/dashboard',
+        STATUS: 'games/status'
     }
 };

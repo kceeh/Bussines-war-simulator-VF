@@ -50,7 +50,6 @@ export const GameProvider = ({ children }) => {
                     setIsNewPlayer(false);
                 } else {
                     // CASO B: NO TIENE PARTIDA (Usuario Nuevo o Reset)
-                    // El backend devolvié 200 OK pero game: null
                     console.log("Usuario sin partida activa. Requiere Setup.");
                     setGameState(null);
                     setIsNewPlayer(true); 
@@ -62,9 +61,6 @@ export const GameProvider = ({ children }) => {
         } catch (error) {
             console.error('Error cargando partida (Frontend):', error);
             setGameState(null); 
-            // Si hay error de red, asumimos que no hay estado seguro, 
-            // pero cuidado con bloquear si es solo caída de red. 
-            // Por seguridad, null suele requerir setup o reintento.
         } finally {
             setIsLoading(false); 
         }
@@ -143,7 +139,7 @@ export const GameProvider = ({ children }) => {
     // ✅ 7. ACCIONES DE JUEGO
     const processInvestment = async (investmentLevels) => {
         try {
-            const response = await apiRequest('games/investment', 'POST', { investmentLevels });
+            const response = await apiRequest(API_ENDPOINTS.GAMES.INVESTMENT, 'POST', { investmentLevels });
             if (response.success) {
                 setGameState(response.gameState);
                 return { success: true, message: response.message, capitalRemaining: response.capitalRemaining };
@@ -157,7 +153,7 @@ export const GameProvider = ({ children }) => {
 
     const advanceWeek = async () => {
         try {
-            const response = await apiRequest('games/advance', 'POST');
+            const response = await apiRequest(API_ENDPOINTS.GAMES.ADVANCE, 'POST');
             if (response.success) {
                 setGameState(response.gameState);
                 return { success: true, message: response.message, week: response.week };
@@ -184,7 +180,7 @@ export const GameProvider = ({ children }) => {
     // ✅ 8. GETTERS AUXILIARES
     const getDashboardData = async () => {
         try {
-            const response = await apiRequest('games/dashboard', 'GET');
+            const response = await apiRequest(API_ENDPOINTS.GAMES.DASHBOARD, 'GET');
             return response.success ? response.dashboardData : null;
         } catch (error) {
             console.error('Error obteniendo datos del dashboard:', error);
@@ -194,18 +190,73 @@ export const GameProvider = ({ children }) => {
 
     const getGameStatus = async () => {
         try {
-            const response = await apiRequest('games/status', 'GET');
+            const response = await apiRequest(API_ENDPOINTS.GAMES.STATUS, 'GET');
             return response.success ? response.status : null;
         } catch (error) {
             return null;
         }
     };
 
+    // ✅ 9. FUNCIONES QUE ME FALTARON (IMPORTANTES)
+    const makeDecision = async (decisionData) => {
+        try {
+            const response = await apiRequest(API_ENDPOINTS.GAMES.DECISION, 'POST', decisionData);
+            if (response.success) {
+                setGameState(response.gameState);
+                return { success: true, message: response.message, results: response.results };
+            } else {
+                return { success: false, message: response.message };
+            }
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    };
+
+    // ✅ 10. ACTUALIZAR ESTADO LOCAL (para juego offline/modalidades)
+    const updateLocalGameState = (newState) => {
+        setGameState(newState);
+        // Guardar automáticamente si está autenticado
+        if (isAuthenticated) {
+            saveGameState(newState);
+        }
+    };
+
+    // ✅ 11. VERIFICAR SI HAY JUEGO ACTIVO
+    const hasActiveGame = () => {
+        return gameState !== null && gameState !== undefined;
+    };
+
     const value = {
-        user, isAuthenticated, gameState, isLoading, isNewPlayer, // Exportamos isNewPlayer
-        loginUser, registerUser, logoutUser, 
-        createNewGame, saveGameState, resetGame, processInvestment, advanceWeek,
-        getDashboardData, getGameStatus
+        // Estados
+        user, 
+        isAuthenticated, 
+        gameState, 
+        isLoading, 
+        isNewPlayer,
+        
+        // Auth
+        loginUser, 
+        registerUser, 
+        logoutUser, 
+        
+        // Game Management
+        createNewGame, 
+        saveGameState, 
+        resetGame, 
+        
+        // Game Actions
+        processInvestment, 
+        advanceWeek,
+        makeDecision,
+        
+        // Getters
+        getDashboardData, 
+        getGameStatus,
+        
+        // Utils
+        updateLocalGameState,
+        hasActiveGame,
+        loadCurrentGame // Exportar para recarga manual
     };
 
     return (
