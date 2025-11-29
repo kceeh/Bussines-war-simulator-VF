@@ -2,11 +2,32 @@
 const API_BASE = 'https://bussines-war-simulator-vf.onrender.com';
 
 export const apiRequest = async (endpoint, method = 'GET', data = null) => {
-    // ✅ NUEVO: Remover slash duplicado si existe
-    const cleanEndpoint = endpoint.startsWith('/') ? endpoint.substring(1) : endpoint;
+    // ✅ DEBUG EXTRA - mostrar exactamente qué endpoint llega
+    console.log('🔍 DEBUG API - Endpoint original:', endpoint);
+    console.log('🔍 DEBUG API - Tipo de endpoint:', typeof endpoint);
+    console.log('🔍 DEBUG API - Endpoint contiene #:', endpoint.includes('#'));
+    
+    // ✅ LIMPIAR ENDPOINT MÁS AGRESIVAMENTE
+    let cleanEndpoint = endpoint;
+    
+    // Remover slash inicial si existe
+    if (cleanEndpoint.startsWith('/')) {
+        cleanEndpoint = cleanEndpoint.substring(1);
+    }
+    
+    // Remover cualquier fragmento de hash (#) si existe
+    if (cleanEndpoint.includes('#')) {
+        console.warn('🔍 DEBUG API: ⚠️ Endpoint contiene #! Limpiando...');
+        cleanEndpoint = cleanEndpoint.split('#')[0];
+    }
+    
+    // Remover doble slash si existe
+    cleanEndpoint = cleanEndpoint.replace(/\/\//g, '/');
+    
     const fullUrl = `${API_BASE}/${cleanEndpoint}`;
     
-    console.log('🔍 DEBUG API: Llamando a:', fullUrl);
+    console.log('🔍 DEBUG API - Endpoint limpio:', cleanEndpoint);
+    console.log('🔍 DEBUG API - URL final:', fullUrl);
     console.log('🔍 DEBUG API: Método:', method);
     console.log('🔍 DEBUG API: Datos:', data);
 
@@ -15,7 +36,7 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
     console.log('🔍 DEBUG API: Token disponible:', !!token);
 
     const options = {
-        method: method, // ✅ Asegurar que method sea string, no objeto
+        method: method,
         headers: {
             'Content-Type': 'application/json',
         },
@@ -38,7 +59,7 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
 
         console.log('🔍 DEBUG API: Status:', response.status);
         console.log('🔍 DEBUG API: OK:', response.ok);
-        console.log('🔍 DEBUG API: URL:', response.url);
+        console.log('🔍 DEBUG API: URL real:', response.url);
         
         const responseText = await response.text();
         console.log('🔍 DEBUG API: Respuesta COMPLETA:', responseText);
@@ -89,15 +110,15 @@ export const apiRequest = async (endpoint, method = 'GET', data = null) => {
 
 export const API_ENDPOINTS = {
     AUTH: {
-        REGISTER: 'auth/register',  // ✅ Sin slash inicial
-        LOGIN: 'auth/login',        // ✅ Sin slash inicial
-        PROFILE: 'auth/profile'     // ✅ Sin slash inicial
+        REGISTER: 'auth/register',
+        LOGIN: 'auth/login',
+        PROFILE: 'auth/profile'
     },
     GAMES: {
-        CURRENT: 'games/current',   // ✅ Sin slash inicial
-        NEW: 'games/new',           // ✅ Sin slash inicial
-        SAVE: 'games/save',         // ✅ Sin slash inicial
-        DECISION: 'games/decision', // ✅ Sin slash inicial
-        RESET: 'games/reset'        // ✅ Sin slash inicial
+        CURRENT: 'games/current',
+        NEW: 'games/new',
+        SAVE: 'games/save',
+        DECISION: 'games/decision',
+        RESET: 'games/reset'
     }
 };
