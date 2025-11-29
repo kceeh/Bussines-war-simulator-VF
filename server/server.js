@@ -29,7 +29,7 @@ app.use(cors({
     }
     
     // Permitir también tu dominio principal por si acaso
-    if (origin === 'https://bussines-war-simulator-vf.vercel.app') {
+    if (origin === 'https://bussineswarsimulator.netlify.app') {
       return callback(null, true);
     }
     
