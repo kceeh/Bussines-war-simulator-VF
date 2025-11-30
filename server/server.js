@@ -29,7 +29,7 @@ app.use(cors({
     }
     
     // Permitir también tu dominio principal por si acaso
-    if (origin === 'https://bussineswarsimulator.netlify.app') {
+    if (origin === 'https://bussineswars.netlify.app') {
       return callback(null, true);
     }
     
