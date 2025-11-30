@@ -418,3 +418,13 @@ module.exports = {
     getDashboardData, 
     getGameStatus 
 };
+
+export const useGame = () => {
+    const context = useContext(GameContext);
+    if (!context) {
+        throw new Error('useGame debe ser usado dentro de un GameProvider');
+    }
+    return context;
+};
+
+export default GameContext;
