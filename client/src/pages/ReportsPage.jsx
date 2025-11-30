@@ -91,7 +91,7 @@ const ReportsPage = () => {
                         onClick={generatePdfReport}
                         className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-600"
                     >
-                        Generar Reporte PDF (RF07)
+                        Generar Reporte PDF
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0113 3.414L16.586 7A2 2 0 0118 8.414V16a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm2 0v4a1 1 0 001 1h4V4H6zm6 8a1 1 0 01-1 1H9a1 1 0 110-2h2a1 1 0 011 1z" clipRule="evenodd" />
                         </svg>

@@ -69,17 +69,17 @@ const LandingPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
                     <FeatureCard 
                         icon="🤖" 
-                        title="IA Adaptativa (RF04)" 
+                        title="IA Adaptativa" 
                         description="Enfréntate a competidores controlados por IA que reaccionan a cada decisión, asegurando un desafío continuo."
                     />
                     <FeatureCard 
                         icon="💰" 
-                        title="Motor Económico Dinámico (RF03)" 
+                        title="Motor Económico Dinámico" 
                         description="Experimenta la gestión de recursos, costos e ingresos que reflejan la lógica real del mercado, integrando IA y economía dinámica."
                     />
                     <FeatureCard 
                         icon="📊" 
-                        title="Análisis de Rendimiento (RF05)" 
+                        title="Análisis de Rendimiento" 
                         description="Visualiza tus indicadores de desempeño mediante dashboards, gráficos interactivos, y reportes detallados (RF07)."
                     />
                 </div>
