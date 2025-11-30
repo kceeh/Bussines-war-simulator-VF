@@ -1,271 +1,420 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiRequest, API_ENDPOINTS } from '../config/api';
+const Game = require('../models/Game');
 
-const GameContext = createContext();
+// ==========================================
+// 1. CONSTANTES Y CONFIGURACIÓN
+// ==========================================
+const BASE_EMPLOYEE_COST = 5000;
 
-export const GameProvider = ({ children }) => {
-    const [gameState, setGameState] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [user, setUser] = useState(null);
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    
-    // ✅ NUEVO: Bandera para saber si el usuario necesita Setup obligatoriamente
-    const [isNewPlayer, setIsNewPlayer] = useState(false);
+// ✅ CORRECCIÓN FINANCIERA: 
+// 70% es el MARGEN DE BENEFICIO (lo que ingresa a caja). 
+// El 30% restante se considera Costo de Ventas/Retención.
+const REVENUE_SHARE = 0.70; 
 
-    // Cargar usuario al iniciar
-    useEffect(() => {
-        checkAuth();
-    }, []);
-
-    // ✅ 1. VERIFICAR AUTENTICACIÓN
-    const checkAuth = async () => {
-        const token = localStorage.getItem('token');
-        const storedAuth = localStorage.getItem('isAuthenticated');
-
-        if (token && storedAuth === 'true') {
-            try {
-                const profile = await apiRequest(API_ENDPOINTS.AUTH.PROFILE, 'GET');
-                setUser(profile.user);
-                setIsAuthenticated(true);
-                await loadCurrentGame(); 
-            } catch (error) {
-                console.error('Error verificando sesión:', error);
-                logoutUser();
-                setIsLoading(false);
-            }
-        } else {
-            setIsLoading(false);
-        }
-    };
-
-    // ✅ 2. CARGAR PARTIDA ACTUAL (Lógica "Nuevo vs Viejo")
-    const loadCurrentGame = async () => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.GAMES.CURRENT, 'GET');
-            
-            if (response.success) {
-                if (response.game && response.game.gameState) {
-                    // CASO A: TIENE PARTIDA (Usuario Viejo)
-                    setGameState(response.game.gameState);
-                    setIsNewPlayer(false);
-                } else {
-                    // CASO B: NO TIENE PARTIDA (Usuario Nuevo o Reset)
-                    console.log("Usuario sin partida activa. Requiere Setup.");
-                    setGameState(null);
-                    setIsNewPlayer(true); 
-                }
-            } else {
-                setGameState(null);
-                setIsNewPlayer(true);
-            }
-        } catch (error) {
-            console.error('Error cargando partida (Frontend):', error);
-            setGameState(null); 
-        } finally {
-            setIsLoading(false); 
-        }
-    };
-
-    // ✅ 3. LOGIN
-    const loginUser = async (credentials) => {
-        try {
-            const result = await apiRequest(API_ENDPOINTS.AUTH.LOGIN, 'POST', credentials);
-            if (result.success) {
-                localStorage.setItem('token', result.token);
-                localStorage.setItem('isAuthenticated', 'true');
-                
-                const profile = await apiRequest(API_ENDPOINTS.AUTH.PROFILE, 'GET');
-                setUser(profile.user);
-                setIsAuthenticated(true);
-                
-                // Cargar juego para determinar si va a Setup o Dashboard
-                await loadCurrentGame(); 
-            }
-            return result;
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    };
-    
-    // ✅ 4. REGISTRO / LOGOUT
-    const registerUser = async (userData) => {
-        try {
-            const result = await apiRequest(API_ENDPOINTS.AUTH.REGISTER, 'POST', userData);
-            return result;
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    };
-
-    const logoutUser = () => {
-        setUser(null);
-        setIsAuthenticated(false);
-        setGameState(null);
-        setIsNewPlayer(false); // Resetear bandera
-        localStorage.removeItem('token');
-        localStorage.removeItem('isAuthenticated');
-        localStorage.removeItem('user');
-    };
-
-    // ✅ 5. CREAR NUEVA PARTIDA (Actualiza estado al instante)
-    const createNewGame = async (gameData) => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.GAMES.NEW, 'POST', gameData);
-            if (response.success) {
-                setGameState(response.game.gameState);
-                setIsNewPlayer(false); // 🔓 ¡DESBLOQUEA EL DASHBOARD!
-                return { success: true, message: 'Partida creada exitosamente' };
-            } else {
-                return { success: false, message: response.message };
-            }
-        } catch (error) {
-            console.error('Error creando partida:', error);
-            return { success: false, message: 'Error de conexión: ' + error.message };
-        }
-    };
-    
-    // ✅ 6. GUARDAR ESTADO
-    const saveGameState = async (newState) => {
-        if (newState) setGameState(newState);
-        if (isAuthenticated && newState) {
-            try { 
-                await apiRequest(API_ENDPOINTS.GAMES.SAVE, 'POST', { gameState: newState }); 
-            } catch (error) { 
-                console.error('Error guardando partida en segundo plano:', error); 
-            }
-        }
-    };
-
-    // ✅ 7. ACCIONES DE JUEGO
-    const processInvestment = async (investmentLevels) => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.GAMES.INVESTMENT, 'POST', { investmentLevels });
-            if (response.success) {
-                setGameState(response.gameState);
-                return { success: true, message: response.message, capitalRemaining: response.capitalRemaining };
-            } else {
-                return { success: false, message: response.message };
-            }
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    };
-
-    const advanceWeek = async () => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.GAMES.ADVANCE, 'POST');
-            if (response.success) {
-                setGameState(response.gameState);
-                return { success: true, message: response.message, week: response.week };
-            } else {
-                return { success: false, message: response.message };
-            }
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    };
-    
-    const resetGame = async () => {
-        if (isAuthenticated) {
-            try { 
-                await apiRequest(API_ENDPOINTS.GAMES.RESET, 'POST'); 
-            } catch (error) { 
-                console.error('Error reiniciando partida:', error); 
-            }
-        }
-        setGameState(null);
-        setIsNewPlayer(true); // 🔒 Bloquea de nuevo, manda a Setup
-    };
-
-    // ✅ 8. GETTERS AUXILIARES
-    const getDashboardData = async () => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.GAMES.DASHBOARD, 'GET');
-            return response.success ? response.dashboardData : null;
-        } catch (error) {
-            console.error('Error obteniendo datos del dashboard:', error);
-            return null;
-        }
-    };
-
-    const getGameStatus = async () => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.GAMES.STATUS, 'GET');
-            return response.success ? response.status : null;
-        } catch (error) {
-            return null;
-        }
-    };
-
-    // ✅ 9. FUNCIONES QUE ME FALTARON (IMPORTANTES)
-    const makeDecision = async (decisionData) => {
-        try {
-            const response = await apiRequest(API_ENDPOINTS.GAMES.DECISION, 'POST', decisionData);
-            if (response.success) {
-                setGameState(response.gameState);
-                return { success: true, message: response.message, results: response.results };
-            } else {
-                return { success: false, message: response.message };
-            }
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    };
-
-    // ✅ 10. ACTUALIZAR ESTADO LOCAL (para juego offline/modalidades)
-    const updateLocalGameState = (newState) => {
-        setGameState(newState);
-        // Guardar automáticamente si está autenticado
-        if (isAuthenticated) {
-            saveGameState(newState);
-        }
-    };
-
-    // ✅ 11. VERIFICAR SI HAY JUEGO ACTIVO
-    const hasActiveGame = () => {
-        return gameState !== null && gameState !== undefined;
-    };
-
-    const value = {
-        // Estados
-        user, 
-        isAuthenticated, 
-        gameState, 
-        isLoading, 
-        isNewPlayer,
-        
-        // Auth
-        loginUser, 
-        registerUser, 
-        logoutUser, 
-        
-        // Game Management
-        createNewGame, 
-        saveGameState, 
-        resetGame, 
-        
-        // Game Actions
-        processInvestment, 
-        advanceWeek,
-        makeDecision,
-        
-        // Getters
-        getDashboardData, 
-        getGameStatus,
-        
-        // Utils
-        updateLocalGameState,
-        hasActiveGame,
-        loadCurrentGame // Exportar para recarga manual
-    };
-
-    return (
-        <GameContext.Provider value={value}>
-            {children}
-        </GameContext.Provider>
-    );
+// ✅ LISTA DE COSTOS ACTUALIZADA (10 Opciones para coincidir con el Frontend)
+const COSTS = { 
+    id_product: 150000, 
+    marketing_online: 100000,
+    staff_sales: 50000,
+    id_tech: 200000,
+    eff_process: 30000,
+    marketing_tv: 80000,
+    eff_training: 120000,
+    staff_support: 180000,
+    ad_segment: 90000,
+    infra_maintenance: 70000
 };
 
-export const useGame = () => {
-    return useContext(GameContext);
+// ==========================================
+// 2. LÓGICA DE RIVALES (SETUP)
+// ==========================================
+const createInitialRivals = (difficulty, baseCapital, baseMarketShare) => {
+    // Aseguramos igualdad de condiciones al inicio (Fair Start).
+    // La dificultad afectará la INTELIGENCIA de la IA semana a semana, no su dinero inicial.
+    const exactCapital = Math.round(baseCapital);
+    const exactMarketShare = baseMarketShare;
+    
+    return [
+        { 
+            name: "Corporación Rival A", 
+            capital: exactCapital, 
+            cuotaMercado: exactMarketShare, 
+            lastInvestment: "Inicio", 
+            strength: "Alta", 
+            lastActionEffect: "Estable" 
+        },
+        { 
+            name: "Tech Competitors Inc", 
+            capital: exactCapital, 
+            cuotaMercado: exactMarketShare,
+            lastInvestment: "Inicio", 
+            strength: "Media", 
+            lastActionEffect: "Estable" 
+        },
+        { 
+            name: "Global Enterprises", 
+            capital: exactCapital, 
+            cuotaMercado: exactMarketShare,
+            lastInvestment: "Inicio", 
+            strength: "Muy Alta", 
+            lastActionEffect: "Estable" 
+        }
+    ];
+};
+
+// ==========================================
+// 3. CONTROLADORES (ENDPOINTS)
+// ==========================================
+
+// --- CREAR NUEVA PARTIDA ---
+const createNewGame = async (req, res) => {
+    try {
+        const { companyName, difficulty, startingCapital, initialMarketShare, settings } = req.body;
+        const userId = req.user.id;
+
+        // Limpieza previa para evitar conflictos
+        await Game.deleteMany({ userId });
+
+        // Generación de rivales sincronizados
+        const rivalsData = createInitialRivals(difficulty, startingCapital, initialMarketShare);
+        
+        const newGame = new Game({
+            userId,
+            gameState: {
+                nombreEmpresa: companyName,
+                semanaActual: 1,
+                
+                // Datos Iniciales Jugador
+                capital: Math.round(startingCapital), // ✅ Capital FINAL de la semana 1
+                capitalInicial: Math.round(startingCapital), // ✅ Capital INICIAL de la semana 1 (mismo que final al inicio)
+                ingresos: 100000, // Ingreso base inicial para arrancar
+                cuotaMercado: initialMarketShare,
+                satisfaccion: 50,
+                
+                // Niveles Iniciales
+                empleados: 5,
+                nivelMarketing: 0,
+                nivelID: 0,
+                nivelEficiencia: 0,
+                lastDecisions: [],
+                
+                // ✅ FIX: Inicializamos la variable crítica para el Dashboard
+                lastInvestmentCost: 0, 
+                
+                // Datos Rivales
+                rivalsData: rivalsData, 
+                
+                // Historial para Gráficos
+                revenueChartData: { labels: ['S1'], datasets: [{ label: 'Ingresos', data: [100000], borderColor: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.2)' }] },
+                marketShareChartData: { labels: ['S1'], datasets: [{ label: 'Cuota', data: [initialMarketShare], borderColor: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.2)' }] },
+                volatilityChartData: { labels: ['S1'], datasets: [{ label: 'Volatilidad', data: [0], borderColor: '#F59E0B', backgroundColor: 'rgba(245, 158, 11, 0.2)' }] },
+                
+                isGameOver: false,
+                winCondition: 'none',
+                
+                settings: {
+                    difficulty: difficulty || 'normal',
+                    maxWeeks: settings?.maxWeeks || 52,
+                    winGoal: settings?.winGoal || { capital: 5000000, marketShare: 50 }
+                }
+            }
+        });
+
+        await newGame.save();
+        res.status(201).json({ success: true, game: newGame });
+    } catch (error) {
+        console.error("Error creando partida:", error);
+        res.status(500).json({ success: false, message: 'Error al crear el juego' });
+    }
+};
+
+// --- OBTENER PARTIDA ACTUAL ---
+const getCurrentGame = async (req, res) => {
+    try {
+        const game = await Game.findOne({ userId: req.user.id });
+        if (!game) {
+            return res.status(200).json({ success: true, game: null, message: 'No hay partida activa.' });
+        }
+        res.json({ success: true, game });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error obteniendo partida' });
+    }
+};
+
+// --- GUARDAR ESTADO MANUALMENTE ---
+const saveGameState = async (req, res) => {
+    try {
+        const { gameState } = req.body;
+        await Game.findOneAndUpdate({ userId: req.user.id }, { gameState }, { new: true });
+        res.json({ success: true, message: 'Partida guardada' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error guardando partida' });
+    }
+};
+
+// --- PROCESAR INVERSIONES DEL JUGADOR ---
+const processInvestment = async (req, res) => {
+    try {
+        const { investmentLevels } = req.body;
+        const game = await Game.findOne({ userId: req.user.id });
+        if (!game) return res.status(404).json({ success: false });
+
+        let kpis = game.gameState;
+        let totalCost = 0;
+        let decisionsList = [];
+
+        // Calcular costos basados en niveles seleccionados
+        for (const [key, level] of Object.entries(investmentLevels)) {
+            if (COSTS[key] && level > 0) {
+                totalCost += COSTS[key] * level;
+                decisionsList.push(`${key.replace('_', ' ')} (x${level})`);
+                
+                // Aplicar mejoras inmediatas a los niveles
+                if (key.includes('marketing') || key.includes('ad') || key.includes('image')) kpis.nivelMarketing += level;
+                if (key.includes('id') || key.includes('process') || key.includes('tech')) kpis.nivelID += level;
+                if (key.includes('eff') || key.includes('cost') || key.includes('hiring')) kpis.nivelEficiencia += level;
+                if (key.includes('staff') || key.includes('hr') || key.includes('infra')) kpis.satisfaccion += (level * 1.5); 
+            }
+        }
+
+        // Validación de fondos
+        if (totalCost > kpis.capital) {
+            return res.json({ success: false, message: 'Capital insuficiente.' });
+        }
+
+        // ✅ CORRECCIÓN: Aplicar gasto de inversiones al capital actual
+        kpis.capital -= totalCost;
+        kpis.capital = Math.round(kpis.capital); // Redondear para evitar decimales locos
+        
+        kpis.lastDecisions = decisionsList; 
+        
+        // ✅ GUARDAR EL COSTO PARA EL DASHBOARD
+        kpis.lastInvestmentCost = totalCost;
+
+        game.markModified('gameState');
+        await game.save();
+
+        res.json({ 
+            success: true, 
+            message: 'Inversiones aplicadas.', 
+            gameState: kpis, 
+            capitalRemaining: kpis.capital,
+            investmentCost: totalCost // ✅ Enviar costo al frontend
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error procesando inversión' });
+    }
+};
+
+// --- AVANZAR SEMANA (LÓGICA PRINCIPAL MODIFICADA) ---
+const advanceWeek = async (req, res) => {
+    try {
+        const game = await Game.findOne({ userId: req.user.id });
+        if (!game) return res.status(404).json({ success: false });
+
+        let kpis = game.gameState;
+        
+        // ✅ CORRECCIÓN CRÍTICA: VERIFICAR CONDICIÓN DE TIEMPO AL INICIO
+        const maxWeeks = kpis.settings.maxWeeks || 52;
+        
+        // Si YA estamos en la última semana, no permitir avanzar más
+        if (kpis.semanaActual >= maxWeeks) {
+            kpis.isGameOver = true;
+            kpis.winCondition = 'lose_time';
+            game.markModified('gameState');
+            await game.save();
+            return res.json({ 
+                success: true, 
+                message: `¡Juego terminado! Se alcanzó el límite de ${maxWeeks} semanas`, 
+                gameState: kpis 
+            });
+        }
+        
+        // ✅ SOLO SI NO HA TERMINADO, avanzar la semana
+        const capitalInicialNuevaSemana = kpis.capital; 
+        kpis.semanaActual += 1;
+        kpis.capitalInicial = capitalInicialNuevaSemana; // ✅ ESTABLECER CAPITAL INICIAL
+        
+        // Ajustes de Dificultad y Tiempo
+        const difficulty = kpis.settings.difficulty || 'normal';
+
+        // Factor de volatilidad del mercado (Random pequeño)
+        const volatility = (Math.random() * 0.10) - 0.05; 
+        
+        // ==========================
+        // 1. CÁLCULOS DEL JUGADOR
+        // ==========================
+        const growthFactor = 1 + (0.02) + (kpis.nivelMarketing * 0.015) + (kpis.nivelID * 0.005) + volatility;
+        const satPenalty = kpis.satisfaccion < 40 ? 0.9 : 1;
+        
+        kpis.ingresos = Math.round(kpis.ingresos * growthFactor * satPenalty);
+        
+        // Crecimiento de Cuota (Más difícil en dificultad alta)
+        let marketGrowthBase = (kpis.nivelMarketing * 0.05) + (kpis.nivelID * 0.05);
+        if (difficulty === 'hard') marketGrowthBase *= 0.8; 
+        
+        const marketGrowth = marketGrowthBase + (volatility * 2);
+        kpis.cuotaMercado = Math.max(0.1, Math.min(60, kpis.cuotaMercado + marketGrowth));
+        kpis.satisfaccion = Math.round(Math.max(10, Math.min(100, kpis.satisfaccion - 2)));
+
+        // Finanzas Jugador
+        const efficiencyDiscount = Math.min(0.4, kpis.nivelEficiencia * 0.02);
+        const fixedCosts = (kpis.empleados * BASE_EMPLOYEE_COST) * (1 - efficiencyDiscount);
+        
+        // ✅ APLICACIÓN DEL MARGEN 70%
+        const grossProfit = kpis.ingresos * REVENUE_SHARE; 
+        const netProfit = grossProfit - fixedCosts;
+        
+        // ✅ Capital FINAL = Capital INICIAL + Ganancia Neta
+        kpis.capital = kpis.capitalInicial + netProfit;
+        kpis.capital = Math.round(kpis.capital);
+
+        // ==========================
+        // 2. LÓGICA RIVALES (IA REALISTA ORIGINAL)
+        // ==========================
+        
+        // Configuración de Personalidad IA según Dificultad
+        let aiAggressiveness = 0.15; // % de capital disponible que invierte
+        let aiEfficiency = 1.0;      // Retorno por dólar invertido
+        
+        if (difficulty === 'easy') { 
+            aiAggressiveness = 0.10; // Tímida
+            aiEfficiency = 0.8;      // Ineficiente
+        }
+        if (difficulty === 'hard') { 
+            aiAggressiveness = 0.25; // Agresiva
+            aiEfficiency = 1.2;      // Optimizada
+        }
+
+        kpis.rivalsData = kpis.rivalsData.map(rival => {
+            let actionText = "Ahorro / Pasivo";
+            let spending = 0;
+            
+            // Lógica de Inversión: Solo invierten si tienen flujo de caja sano
+            if (rival.capital > 50000) {
+                // Inversión variable realista
+                spending = Math.floor(rival.capital * aiAggressiveness * (0.8 + Math.random() * 0.4));
+                
+                rival.capital -= spending;
+                
+                // Impacto en Mercado normalizado (para evitar saltos irreales)
+                // Costo base alto para subir cuota, ajustado por eficiencia de IA
+                const marketImpactBase = 400000; 
+                const marketGain = (spending / marketImpactBase) * aiEfficiency * (0.9 + Math.random() * 0.2);
+                
+                rival.cuotaMercado += marketGain;
+                
+                // Narrativa visual
+                if (spending > 150000) actionText = "Expansión Agresiva";
+                else if (spending > 50000) actionText = "Inversión Moderada";
+                else actionText = "Mantenimiento";
+            }
+
+            // ✅ CORRECCIÓN DE INGRESOS IA (BASADO EN CUOTA):
+            // Ingresos = Cuota de Mercado * Factor Base * Volatilidad.
+            // Factor Base ajustado para que 1% de cuota genere ingresos realistas (~$22k).
+            const revenuePerSharePoint = 22000; 
+            const rivalRevenue = (rival.cuotaMercado * revenuePerSharePoint) * (1 + volatility);
+            
+            // Costos operativos de la IA (Simulados: 25% de sus ingresos son costos fijos)
+            const rivalFixedCosts = (rivalRevenue * 0.25); 
+            
+            // Aplicar Margen de 70% (Igual que al jugador)
+            const rivalGrossProfit = rivalRevenue * REVENUE_SHARE; 
+            const rivalNetProfit = rivalGrossProfit - rivalFixedCosts;
+
+            rival.capital += rivalNetProfit;
+            rival.capital = Math.round(rival.capital);
+            
+            return { 
+                ...rival, 
+                lastInvestment: actionText, 
+                lastActionEffect: spending > 0 ? "Creciendo" : "Estable" 
+            };
+        });
+
+        // ==========================
+        // 3. VERIFICAR CONDICIONES DE VICTORIA / DERROTA
+        // ==========================
+        const winGoalCapital = kpis.settings.winGoal.capital;
+        const winGoalShare = kpis.settings.winGoal.marketShare;
+
+        // A. Derrota por Quiebra
+        if (kpis.capital <= 0) {
+            kpis.isGameOver = true; 
+            kpis.winCondition = 'lose_bankrupt'; 
+        }
+        // B. Victoria del Jugador (Meta alcanzada)
+        else if (kpis.capital >= winGoalCapital && kpis.cuotaMercado >= winGoalShare) {
+            kpis.isGameOver = true; 
+            kpis.winCondition = 'win';
+        }
+        // C. Derrota por Competencia (IA ganó)
+        else {
+            const winnerRival = kpis.rivalsData.find(r => r.capital >= winGoalCapital && r.cuotaMercado >= winGoalShare);
+            if (winnerRival) {
+                kpis.isGameOver = true;
+                kpis.winCondition = 'lose_rival'; 
+                kpis.winnerName = winnerRival.name; 
+            }
+            // D. ✅ CORRECCIÓN MANTENIDA: Derrota por Tiempo Agotado (por seguridad)
+            else if (kpis.semanaActual > maxWeeks) {
+                kpis.isGameOver = true;
+                kpis.winCondition = 'lose_time';
+            }
+        }
+
+        // Actualizar Gráficos Históricos
+        kpis.revenueChartData.labels.push(`S${kpis.semanaActual}`);
+        kpis.revenueChartData.datasets[0].data.push(kpis.ingresos);
+        kpis.marketShareChartData.labels.push(`S${kpis.semanaActual}`);
+        kpis.marketShareChartData.datasets[0].data.push(kpis.cuotaMercado);
+        kpis.volatilityChartData.labels.push(`S${kpis.semanaActual}`);
+        kpis.volatilityChartData.datasets[0].data.push(volatility * 100);
+
+        game.markModified('gameState');
+        await game.save();
+
+        res.json({ success: true, message: `Semana ${kpis.semanaActual} completada`, gameState: kpis });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error avanzando semana' });
+    }
+};
+
+// --- OTROS ENDPOINTS AUXILIARES ---
+const resetGame = async (req, res) => { 
+    try { 
+        await Game.deleteOne({ userId: req.user.id }); 
+        res.json({ success: true }); 
+    } catch (e) { 
+        res.status(500).json({ success: false }); 
+    } 
+};
+
+const getDashboardData = async (req, res) => { 
+    try { 
+        const game = await Game.findOne({ userId: req.user.id }); 
+        res.json({ success: true, dashboardData: game?.gameState }); 
+    } catch (e) { 
+        res.status(500).json({ success: false }); 
+    } 
+};
+
+const getGameStatus = async (req, res) => { 
+    try { 
+        const game = await Game.findOne({ userId: req.user.id }); 
+        res.json({ success: true, status: { currentWeek: game?.gameState.semanaActual, isGameOver: game?.gameState.isGameOver } }); 
+    } catch (e) { 
+        res.status(500).json({ success: false }); 
+    } 
+};
+
+module.exports = { 
+    createNewGame, 
+    getCurrentGame, 
+    saveGameState, 
+    processInvestment, 
+    advanceWeek, 
+    resetGame, 
+    getDashboardData, 
+    getGameStatus 
 };
