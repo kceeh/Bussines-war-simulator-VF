@@ -213,10 +213,24 @@ const advanceWeek = async (req, res) => {
 
         let kpis = game.gameState;
         
-        // ✅ CORRECCIÓN CRÍTICA: El capital INICIAL de la nueva semana debe ser el capital FINAL actual
-        // (después de las inversiones realizadas en DecisionsPage)
-        const capitalInicialNuevaSemana = kpis.capital; 
+        // ✅ CORRECCIÓN CRÍTICA: VERIFICAR CONDICIÓN DE TIEMPO AL INICIO
+        const maxWeeks = kpis.settings.maxWeeks || 52;
         
+        // Si YA estamos en la última semana, no permitir avanzar más
+        if (kpis.semanaActual >= maxWeeks) {
+            kpis.isGameOver = true;
+            kpis.winCondition = 'lose_time';
+            game.markModified('gameState');
+            await game.save();
+            return res.json({ 
+                success: true, 
+                message: `¡Juego terminado! Se alcanzó el límite de ${maxWeeks} semanas`, 
+                gameState: kpis 
+            });
+        }
+        
+        // ✅ SOLO SI NO HA TERMINADO, avanzar la semana
+        const capitalInicialNuevaSemana = kpis.capital; 
         kpis.semanaActual += 1;
         kpis.capitalInicial = capitalInicialNuevaSemana; // ✅ ESTABLECER CAPITAL INICIAL
         

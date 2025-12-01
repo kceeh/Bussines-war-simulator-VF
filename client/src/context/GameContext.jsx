@@ -266,6 +266,7 @@ export const GameProvider = ({ children }) => {
     );
 };
 
+// ✅ ESTA LÍNEA SÍ ESTÁ INCLUIDA - NO LA QUITES
 export const useGame = () => {
     return useContext(GameContext);
 };
