@@ -236,7 +236,6 @@ const advanceWeek = async (req, res) => {
         
         // Ajustes de Dificultad y Tiempo
         const difficulty = kpis.settings.difficulty || 'normal';
-        const maxWeeks = kpis.settings.maxWeeks || 52;
 
         // Factor de volatilidad del mercado (Random pequeño)
         const volatility = (Math.random() * 0.10) - 0.05; 
@@ -357,7 +356,7 @@ const advanceWeek = async (req, res) => {
                 kpis.winCondition = 'lose_rival'; 
                 kpis.winnerName = winnerRival.name; 
             }
-            // D. ✅ Derrota por Tiempo Agotado
+            // D. ✅ CORRECCIÓN MANTENIDA: Derrota por Tiempo Agotado (por seguridad)
             else if (kpis.semanaActual > maxWeeks) {
                 kpis.isGameOver = true;
                 kpis.winCondition = 'lose_time';
